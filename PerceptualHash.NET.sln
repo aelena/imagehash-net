@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{93956114-6454-4278-8D40-A47A3AE363E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetImgHash", "src\NetImgHash\NetImgHash.csproj", "{7B529EE5-FFEB-468B-B699-EC79AD0FB5FF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4638EC07-EB3F-4B14-AC8E-D61CF831F25E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetImgHash.Tests", "tests\NetImgHash.Tests\NetImgHash.Tests.csproj", "{D57038D5-9327-4E65-A7E7-568498E5DD85}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7B529EE5-FFEB-468B-B699-EC79AD0FB5FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B529EE5-FFEB-468B-B699-EC79AD0FB5FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B529EE5-FFEB-468B-B699-EC79AD0FB5FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B529EE5-FFEB-468B-B699-EC79AD0FB5FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D57038D5-9327-4E65-A7E7-568498E5DD85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D57038D5-9327-4E65-A7E7-568498E5DD85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D57038D5-9327-4E65-A7E7-568498E5DD85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D57038D5-9327-4E65-A7E7-568498E5DD85}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7B529EE5-FFEB-468B-B699-EC79AD0FB5FF} = {93956114-6454-4278-8D40-A47A3AE363E3}
+		{D57038D5-9327-4E65-A7E7-568498E5DD85} = {4638EC07-EB3F-4B14-AC8E-D61CF831F25E}
+	EndGlobalSection
+EndGlobal

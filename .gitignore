@@ -1,0 +1,38 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.snupkg
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+## Build
+publish/
+out/
+artifacts/
+TestResults/
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Secrets
+appsettings.Development.json
+*.env
+.env
+
+## Logs
+logs/
+*.log
+
+.venv/

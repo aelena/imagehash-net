@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "file": "standard-photo.png",
+      "averageHash": "00000b191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "RGB base image"
+    },
+    {
+      "file": "grayscale-image.png",
+      "averageHash": "00000b191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "Grayscale conversion"
+    },
+    {
+      "file": "high-resolution.png",
+      "averageHash": "00000b191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "4K-style resize"
+    },
+    {
+      "file": "thumbnail.png",
+      "averageHash": "00000b191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "Low resolution thumbnail"
+    },
+    {
+      "file": "exif-orientation.jpg",
+      "averageHash": "00000b191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "JPEG with EXIF orientation=6"
+    },
+    {
+      "file": "transparent-overlay.png",
+      "averageHash": "00000b191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "PNG with transparency"
+    },
+    {
+      "file": "compressed-q50.jpg",
+      "averageHash": "000009191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "JPEG quality 50"
+    },
+    {
+      "file": "compressed-q90.jpg",
+      "averageHash": "000009191f7f1bff",
+      "differenceHash": "e7b433b3fbfd73f3",
+      "notes": "JPEG quality 90"
+    },
+    {
+      "file": "cropped-version.png",
+      "averageHash": "000719f91d7fff3f",
+      "differenceHash": "66777171fbfefbf3",
+      "notes": "Slight crop and resize"
+    },
+    {
+      "file": "rotated-version.png",
+      "averageHash": "3f2f0d3f1f050501",
+      "differenceHash": "fbdbc9f9b535b5ef",
+      "notes": "90 degree rotation"
+    }
+  ]
+}
