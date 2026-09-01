@@ -3,9 +3,30 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '**/LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+      - 'docs/**'
+      - '.vscode/**'
+      - '.idea/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '**/LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+      - 'docs/**'
+      - '.vscode/**'
+      - '.idea/**'
   workflow_dispatch:
+  # Callable from release.yml, so a tag runs these exact gates rather than a
+  # separate copy of them that can drift.
+  workflow_call:
 
 permissions:
   contents: read
@@ -28,13 +49,13 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # One SDK per target framework. The .NET 11 SDK is still preview; when it
       # is unavailable the job fails loudly rather than quietly building fewer
       # targets than the published package claims.
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             8.0.x
@@ -58,7 +79,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
           path: ./TestResults
@@ -70,13 +91,13 @@ jobs:
     needs: build
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # SourceLink embeds commit information, which needs real history.
           fetch-depth: 0
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             8.0.x
@@ -90,7 +111,7 @@ jobs:
         run: dotnet pack src/NetImgHash/NetImgHash.csproj -c Release -o ./artifacts
 
       - name: Upload package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: ./artifacts/*.*nupkg

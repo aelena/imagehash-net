@@ -22,7 +22,15 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
+  # The full CI suite — every framework, both operating systems, the MIT-only
+  # build, the licence-boundary assertion and the Docker image — must pass on the
+  # tagged commit before anything is published. Called rather than copied, so the
+  # release gate cannot drift from the pull-request gate.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: ci
     runs-on: ubuntu-latest
     # Must match the Environment field on the nuget.org trusted publishing
     # policy. The OIDC token only carries an environment claim when the job
@@ -31,22 +39,18 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             8.0.x
             10.0.x
             11.0.x
           dotnet-quality: preview
-
-      # A tag must never publish something that does not pass its own tests.
-      - name: Test
-        run: dotnet test PerceptualHash.NET.sln -c Release
 
       - name: Pack
         run: dotnet pack src/NetImgHash/NetImgHash.csproj -c Release -o ./artifacts
@@ -66,7 +70,7 @@ jobs:
           fi
 
       - name: Upload package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: ./artifacts/*.*nupkg
