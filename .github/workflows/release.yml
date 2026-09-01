@@ -1,0 +1,90 @@
+name: Release
+
+# Publishing is driven by a tag, so what reaches NuGet is always a specific
+# commit that CI has built. Tag with the package version, e.g. v0.2.0.
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and validate the package without pushing to NuGet"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+            11.0.x
+          dotnet-quality: preview
+
+      # A tag must never publish something that does not pass its own tests.
+      - name: Test
+        run: dotnet test PerceptualHash.NET.sln -c Release
+
+      - name: Pack
+        run: dotnet pack src/NetImgHash/NetImgHash.csproj -c Release -o ./artifacts
+
+      # The tag is the source of truth: refuse to publish v1.2.3 as 1.2.4.
+      - name: Verify the tag matches the package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(ls artifacts/PerceptualHash.NET.*.nupkg | head -1)
+          version=$(basename "$pkg" .nupkg | sed 's/^PerceptualHash.NET\.//')
+          echo "tag=$tag package=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag $tag does not match package version $version. Update <Version> in NetImgHash.csproj."
+            exit 1
+          fi
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: ./artifacts/*.*nupkg
+
+      - name: Push to NuGet
+        if: startsWith(github.ref, 'refs/tags/') && !inputs.dry_run
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "::error::NUGET_API_KEY is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          # --skip-duplicate makes a re-run of a partially failed release safe:
+          # a version already on nuget.org is reported, not treated as a failure.
+          dotnet nuget push "artifacts/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/') && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)." \
+            artifacts/*.nupkg

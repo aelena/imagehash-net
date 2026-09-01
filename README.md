@@ -1,6 +1,13 @@
 # PerceptualHash.NET
 
+[![CI](https://github.com/aelena/imagehash-net/actions/workflows/ci.yml/badge.svg)](https://github.com/aelena/imagehash-net/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/PerceptualHash.NET.svg)](https://www.nuget.org/packages/PerceptualHash.NET)
+[![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%2010.0%20%7C%2011.0-blue)]()
+[![License](https://img.shields.io/badge/license-MIT-green)]()
+
 `PerceptualHash.NET` is a cross-platform image hashing library for modern .NET, implemented in the `NetImgHash` namespace and built on `SixLabors.ImageSharp`.
+
+Output is verified against the Python [`imagehash`](https://github.com/JohannesBuchner/imagehash) reference implementation by a golden dataset, so hashes are comparable across the two ecosystems.
 
 ## Status
 
@@ -14,13 +21,16 @@ This repository currently ships the MVP surface:
 
 ## Target Frameworks
 
-The library is authored for:
+- `net8.0` — in support until November 2026
+- `net10.0` — LTS
+- `net11.0`
 
-- `net8.0`
-- `net9.0`
-- `net10.0`
+`net9.0` is not targeted: it went out of support in May 2026.
 
-The checked-in project file lights up additional target frameworks when newer SDKs are installed. On a machine with only the .NET 8 SDK, the solution builds and tests the `net8.0` target.
+The frameworks are fixed in `Directory.Build.props` rather than derived from the
+installed SDK, so a local build produces the same set of targets as CI and as the
+published package. Building all three needs the .NET 8, 10, and 11 SDKs; to build
+a subset, pass `-p:TargetFrameworks=net10.0`.
 
 ## Install
 
@@ -39,9 +49,19 @@ using var stream2 = File.OpenRead("image-edited.jpg");
 var hash1 = ImageHasher.Compute(stream1, HashAlgorithm.DifferenceHash);
 var hash2 = ImageHasher.Compute(stream2, HashAlgorithm.DifferenceHash);
 
-var distance = hash1.HammingDistance(hash2);
-var similarity = hash1.Similarity(hash2);
+var distance = hash1.HammingDistance(hash2);   // 0 = identical, 64 = every bit differs
+var similarity = hash1.Similarity(hash2);      // 1.0 = identical, 0.0 = every bit differs
+
+// Hashes round-trip through lowercase hex, so they can be stored and compared later.
+var stored = hash1.ToString();                 // e.g. "a1b2c3d4e5f60718"
+var restored = ImageHash.Parse(stored);
 ```
+
+A `Hamming` distance of 0–5 on a 64-bit hash usually means the same image; above
+about 10 usually means a different one. Tune the threshold against your own data.
+
+`Compute` throws `NotSupportedException` for `HashAlgorithm.PerceptualHash` and
+`HashAlgorithm.WaveletHash`, which are reserved but not yet implemented.
 
 ## Algorithm Specifications
 
@@ -94,8 +114,16 @@ To regenerate the dataset locally with Python:
 
 ```bash
 dotnet build PerceptualHash.NET.sln
-dotnet test PerceptualHash.NET.sln
+dotnet test PerceptualHash.NET.sln   # runs once per target framework
 ```
+
+CI builds and tests on Linux and Windows across all three frameworks. Releases are
+tag-driven: pushing a `v*.*.*` tag packs, checks the tag against the package
+version, and publishes to NuGet.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
