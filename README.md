@@ -121,6 +121,27 @@ CI builds and tests on Linux and Windows across all three frameworks. Releases a
 tag-driven: pushing a `v*.*.*` tag packs, checks the tag against the package
 version, and publishes to NuGet.
 
+## Releasing
+
+Publishing uses **NuGet Trusted Publishing** — nuget.org exchanges a short-lived
+GitHub OIDC token for a one-hour API key, so no long-lived secret is stored.
+
+One-time setup on nuget.org (Account → Trusted Publishing):
+
+| Field | Value |
+|-------|-------|
+| Repository Owner | `aelena` |
+| Repository | `imagehash-net` |
+| Workflow File | `release.yml` (file name only, no path) |
+| Environment | leave empty |
+| Glob Patterns and Packages | `PerceptualHash.NET` |
+
+Then add a repository variable or secret `NUGET_USER` holding the nuget.org
+profile name (not an email address).
+
+To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
+`git tag v0.2.0 && git push origin v0.2.0`.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
