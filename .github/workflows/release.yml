@@ -24,6 +24,11 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Must match the Environment field on the nuget.org trusted publishing
+    # policy. The OIDC token only carries an environment claim when the job
+    # declares one, so a policy scoped to "production" rejects a job that does
+    # not — the two have to agree exactly.
+    environment: production
 
     steps:
       - uses: actions/checkout@v5

@@ -133,11 +133,13 @@ One-time setup on nuget.org (Account → Trusted Publishing):
 | Repository Owner | `aelena` |
 | Repository | `imagehash-net` |
 | Workflow File | `release.yml` (file name only, no path) |
-| Environment | leave empty |
+| Environment | `production` (the workflow declares it; the two must match) |
 | Glob Patterns and Packages | `PerceptualHash.NET` |
 
-Then add a repository variable or secret `NUGET_USER` holding the nuget.org
-profile name (not an email address).
+Create a GitHub environment named `production` in the repository, and add a
+secret `NUGET_USER` holding the nuget.org profile name (not an email address).
+
+A policy is bound to **one** repository, so each repository needs its own.
 
 To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
 `git tag v0.2.0 && git push origin v0.2.0`.
