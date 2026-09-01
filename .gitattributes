@@ -1,0 +1,21 @@
+# The .editorconfig sets end_of_line = lf, and IDE0055 enforces it at build time.
+# Without this file, git checks files out with CRLF on Windows, so a Windows
+# contributor's very first build fails on formatting in files they never touched.
+# Normalising to LF in the working tree on every platform makes the rule
+# satisfiable everywhere.
+* text=auto eol=lf
+
+# Binary assets must never be touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip binary
+*.eml binary
+*.db binary
+*.nupkg binary
+*.snupkg binary
