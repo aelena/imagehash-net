@@ -1,0 +1,53 @@
+<Project>
+
+  <!--
+    Solution-wide build settings, so no project restates a target framework or
+    language version.
+  -->
+  <PropertyGroup>
+    <!--
+      net8.0 is still in support (until November 2026) and costs little to keep
+      for consumers. net9.0 is dropped: it went out of support in May 2026.
+
+      The target frameworks are stated outright rather than switched on
+      $(NETCoreSdkVersion) as they were before. Deriving them from the installed
+      SDK means the package you build is not the package CI builds, and a
+      contributor on an older SDK silently produces fewer targets than the one
+      published to NuGet.
+    -->
+    <TargetFrameworks>net8.0;net10.0;net11.0</TargetFrameworks>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!--
+    Dependencies are pinned exactly (Directory.Packages.props). NuGetAudit runs
+    across the whole graph and fails the build on a known advisory.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <!-- Reproducible packages: deterministic output plus source and symbols. -->
+  <PropertyGroup>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+</Project>

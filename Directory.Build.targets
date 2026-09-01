@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    Imported after each csproj body, so $(IsTestProject) is already set. The same
+    conditions in Directory.Build.props evaluate before the project declares it
+    and silently do nothing.
+  -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      CA1707: xUnit's Method_Scenario_Expectation convention is deliberate here.
+      CA1861: a constant array inline in test arrangement is clearer than a field.
+      CS1591: XML docs are required on the library's public API, not on test methods.
+    -->
+    <NoWarn>$(NoWarn);CA1707;CA1861;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    IDE0005 (unnecessary using) is enforced on one target framework only. The set
+    of implicit usings differs between frameworks, so a using required by one is
+    redundant in another and no single source file satisfies all three.
+  -->
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net10.0'">
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
+  </PropertyGroup>
+
+</Project>

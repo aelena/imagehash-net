@@ -4,6 +4,11 @@ namespace NetImgHash.Tests;
 
 public sealed class GoldenDatasetTests
 {
+    private static readonly JsonSerializerOptions ManifestOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public static TheoryData<string, string, string, string> HashExpectations
     {
         get
@@ -11,11 +16,7 @@ public sealed class GoldenDatasetTests
             var data = new TheoryData<string, string, string, string>();
             var manifestPath = Path.Combine(AppContext.BaseDirectory, "TestData", "expected_hashes.json");
             var manifest = JsonSerializer.Deserialize<ExpectedHashManifest>(
-                File.ReadAllText(manifestPath),
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                })
+                File.ReadAllText(manifestPath), ManifestOptions)
                 ?? throw new InvalidOperationException("Failed to deserialize expected hash manifest.");
 
             foreach (var entry in manifest.Entries)

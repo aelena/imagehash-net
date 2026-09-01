@@ -15,7 +15,7 @@ public readonly struct ImageHash : IEquatable<ImageHash>
     /// <param name="bitLength">The number of significant bits in <paramref name="value"/>.</param>
     public ImageHash(ulong value, int bitLength)
     {
-        if (bitLength <= 0 || bitLength > 64)
+        if (bitLength is <= 0 or > 64)
         {
             throw new ArgumentOutOfRangeException(nameof(bitLength), "Bit length must be between 1 and 64.");
         }

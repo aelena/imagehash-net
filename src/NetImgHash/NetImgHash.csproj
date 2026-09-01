@@ -1,29 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '9.0.100'))">net8.0;net9.0</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '10.0.100'))">net8.0;net9.0;net10.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>PerceptualHash.NET</PackageId>
     <Title>PerceptualHash.NET</Title>
-    <Description>Cross-platform perceptual image hashing for .NET built on ImageSharp.</Description>
+    <Version>0.2.0</Version>
+    <Description>Cross-platform perceptual image hashing for .NET built on ImageSharp. Implements aHash and dHash, with output verified against the Python imagehash reference implementation.</Description>
     <Authors>aelena</Authors>
     <Company>aelena</Company>
-    <PackageProjectUrl>https://github.com/aelena/NetImgHash</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/aelena/NetImgHash</RepositoryUrl>
+    <!-- These pointed at github.com/aelena/NetImgHash, which does not exist; the
+         repository is imagehash-net, so every link on the NuGet page 404'd. -->
+    <PackageProjectUrl>https://github.com/aelena/imagehash-net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/aelena/imagehash-net</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>imagehash;imagesharp;perceptual;hashing;similarity;net10</PackageTags>
+    <PackageTags>imagehash;imagesharp;perceptual;hashing;similarity;ahash;dhash;duplicate-detection</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
