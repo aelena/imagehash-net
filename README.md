@@ -369,13 +369,13 @@ secret `NUGET_USER` holding the nuget.org profile name (not an email address).
 A policy is bound to **one** repository, so each repository needs its own.
 
 To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
-`git tag v0.3.0 && git push origin v0.3.0`.
+`git tag v0.4.0 && git push origin v0.4.0`.
 
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
-**Unreleased** — pHash implemented, bit-compatible with `imagehash.phash`. The
+**0.4.0** — pHash implemented, bit-compatible with `imagehash.phash`. The
 grayscale and resize stages now reproduce Pillow's arithmetic exactly instead of
 using ImageSharp's resampler, which changes borderline aHash and dHash bits: two of
 the ten golden values moved by one bit and now match the reference.
