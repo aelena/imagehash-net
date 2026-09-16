@@ -23,6 +23,7 @@ public sealed class GoldenDatasetTests
             {
                 data.Add(entry.File, nameof(HashAlgorithm.AverageHash), entry.AverageHash, entry.Notes ?? string.Empty);
                 data.Add(entry.File, nameof(HashAlgorithm.DifferenceHash), entry.DifferenceHash, entry.Notes ?? string.Empty);
+                data.Add(entry.File, nameof(HashAlgorithm.PerceptualHash), entry.PerceptualHash, entry.Notes ?? string.Empty);
             }
 
             return data;
@@ -47,5 +48,6 @@ public sealed class GoldenDatasetTests
         string File,
         string AverageHash,
         string DifferenceHash,
+        string PerceptualHash,
         string? Notes);
 }

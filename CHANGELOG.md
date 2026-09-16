@@ -6,8 +6,36 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`HashAlgorithm.PerceptualHash` (pHash) is implemented**, bit-compatible with
+  Python `imagehash.phash` at its defaults: 32×32 grayscale, un-normalised DCT-II
+  along each axis, top-left 8×8 block including the DC term, strict comparison
+  against the `numpy.median` of the block. Coefficients are rounded to six decimals
+  first so mathematically equal terms compare equal, as they do out of scipy's
+  FFT-based transform; without that a flat image hashes to noise.
+- `tools/regenerate_golden.py` rebuilds `expected_hashes.json` from the checked-in
+  images with the reference implementation and records the `imagehash`, Pillow and
+  NumPy versions in the manifest. The values are no longer edited by hand.
+- 14 tests: pHash for all ten golden images, and four synthetic inputs (flat,
+  checkerboard, two lit pixels, a lit corner block) whose reference values have a
+  clear margin at the median. **60 tests → 74; 180 executions → 222.**
+
 ### Changed
 
+- **Hash values can differ from 0.3.0 on borderline images.** The grayscale and
+  resize stages now reproduce Pillow's arithmetic exactly (`Internal/PillowResampler.cs`:
+  22-bit fixed-point Lanczos-3 coefficients, horizontal then vertical pass, 8-bit
+  rounding in between; luma as `(19595 R + 38470 G + 7471 B + 32768) >> 16`).
+  ImageSharp's resampler, used before, differs from Pillow's by ±1 on roughly one
+  pixel in ten, which made bit-exact pHash impossible and had already produced two
+  golden values that the reference does not: the EXIF JPEG's aHash
+  (`00000b19…` → `00000919…`) and the cropped PNG's dHash (`6677…` → `6777…`).
+  Both now match `imagehash`. If you store hashes, expect at most a bit or two of
+  drift on images whose pixels sat on a threshold; re-hash if exact equality
+  matters to you.
+- ImageSharp is now used for decoding only. `SixLabors.ImageSharp.Processing` is
+  no longer referenced.
 - README: replaces the terse algorithm list with an account of the exact pipeline
   (Pillow luma before a Lanczos-3 resize, integer mean, strict comparisons, MSB-first
   packing), states plainly that no DCT-based pHash is implemented yet despite the

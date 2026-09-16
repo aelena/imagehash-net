@@ -16,7 +16,8 @@ public enum HashAlgorithm
     DifferenceHash = 1,
 
     /// <summary>
-    /// Reserves the perceptual hash (pHash) algorithm for a later release.
+    /// Computes the DCT-based perceptual hash (pHash), suited to detecting re-compressed,
+    /// blurred or colour-adjusted copies. Bit-compatible with Python <c>imagehash.phash</c>.
     /// </summary>
     PerceptualHash = 2,
 

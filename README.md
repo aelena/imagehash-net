@@ -4,7 +4,7 @@
 [![NuGet](https://img.shields.io/nuget/v/PerceptualHash.NET.svg?logo=nuget)](https://www.nuget.org/packages/PerceptualHash.NET)
 [![Downloads](https://img.shields.io/nuget/dt/PerceptualHash.NET.svg?logo=nuget)](https://www.nuget.org/packages/PerceptualHash.NET)
 [![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%2010.0%20%7C%2011.0-512BD4)]()
-[![Tests](https://img.shields.io/badge/tests-180%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-222%20passing-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 `PerceptualHash.NET` is a cross-platform image hashing library for modern .NET, implemented in the `NetImgHash` namespace and built on `SixLabors.ImageSharp`.
@@ -17,9 +17,10 @@ This repository currently ships the MVP surface:
 
 - `AverageHash` (`aHash`)
 - `DifferenceHash` (`dHash`)
+- `PerceptualHash` (`pHash`)
 - `ImageHash` value type with Hamming distance and similarity helpers
 
-`PerceptualHash` (`pHash`) and `WaveletHash` (`wHash`) are reserved in the public API for follow-up releases.
+`WaveletHash` (`wHash`) is reserved in the public API for a follow-up release.
 
 ## Target Frameworks
 
@@ -87,17 +88,15 @@ var restored = ImageHash.Parse(stored);
 A `Hamming` distance of 0–5 on a 64-bit hash usually means the same image; above
 about 10 usually means a different one. Tune the threshold against your own data.
 
-`Compute` throws `NotSupportedException` for `HashAlgorithm.PerceptualHash` and
-`HashAlgorithm.WaveletHash`, which are reserved but not yet implemented.
+`Compute` throws `NotSupportedException` for `HashAlgorithm.WaveletHash`, which is
+reserved but not yet implemented.
 
 ## Which Algorithm Is Used
 
-Despite the package name, **this library does not yet implement pHash**, the
-DCT-based algorithm most people mean by "perceptual hash". What ships today is
-**aHash** and **dHash**, the two simplest members of the same family. Both follow
-the Python `imagehash` implementation step for step, which is what makes the golden
-dataset possible: a hash computed here is the same 64 bits `imagehash` produces for
-the same file.
+Three algorithms ship: **aHash**, **dHash** and **pHash**, the DCT-based one most
+people mean by "perceptual hash". All three follow the Python `imagehash`
+implementation step for step, which is what makes the golden dataset possible: a
+hash computed here is the same 64 bits `imagehash` produces for the same file.
 
 ### The shared pipeline
 
@@ -106,14 +105,21 @@ Every algorithm starts the same way, in `Internal/ImageProcessing.cs`:
 1. **Decode** the image with ImageSharp into 8-bit RGBA. Alpha is ignored; a
    transparent pixel contributes only its RGB values, exactly as Pillow's
    `convert("L")` does.
-2. **Convert to grayscale** using Pillow's ITU-R 601-2 luma weights
-   (`0.299 R + 0.587 G + 0.114 B`, rounded to the nearest integer). Doing this
+2. **Convert to grayscale** with Pillow's own fixed-point ITU-R 601-2 luma,
+   `(19595 R + 38470 G + 7471 B + 32768) >> 16`. The textbook per-mille weights
+   round differently for some colours, so the integer form is used. Doing this
    *before* resizing, not after, matters: the two orders give different pixels
    after interpolation, and `imagehash` converts first.
-3. **Resize** the grayscale image to a tiny fixed grid with a Lanczos-3 filter,
-   which is Pillow's `LANCZOS` (formerly `ANTIALIAS`). This throws away all fine
-   detail and normalises scale, so a 4000×3000 photo and its 400×300 thumbnail
-   arrive at the same few dozen pixels.
+3. **Resize** the grayscale image to a tiny fixed grid with Pillow's Lanczos-3
+   resampler, reproduced operation for operation in `Internal/PillowResampler.cs`:
+   coefficients rounded to 22-bit fixed point, a horizontal pass and then a
+   vertical one, 8-bit rounding in between. ImageSharp's own Lanczos resize is not
+   used because it differs from Pillow's by ±1 on roughly one pixel in ten, which
+   is invisible but enough to flip any bit whose pixel or coefficient sits near a
+   threshold. On PNG input the pixels leaving this stage are byte-for-byte what
+   Pillow produces. The resize throws away all fine detail and normalises scale,
+   so a 4000×3000 photo and its 400×300 thumbnail arrive at the same few dozen
+   pixels.
 4. **Threshold** those pixels into bits. How the threshold is chosen is what
    distinguishes the algorithms.
 
@@ -146,44 +152,57 @@ before, it is brighter after. In practice it produces fewer false matches than a
 on photographic content at the same cost, which is why it is the better default for
 "is this the same picture, lightly edited?".
 
+### Perceptual hash (`HashAlgorithm.PerceptualHash`)
+
+- Resize to **32×32** (1024 pixels).
+- Apply a **2-D Discrete Cosine Transform** (type II, un-normalised, the same as
+  `scipy.fftpack.dct` applied along each axis), turning the pixels into frequency
+  coefficients. This is the transform JPEG uses.
+- Keep the **top-left 8×8 block** of coefficients, DC term included. These describe
+  the coarse structure of the image; the other 960 are detail and noise.
+- Set a bit to `1` where a coefficient is **strictly greater than the median** of
+  the 64. With an even count the median is the mean of the two middle values, as
+  in `numpy.median`.
+
+Working in the frequency domain makes pHash more tolerant of JPEG re-compression,
+blur, gamma and contrast changes than aHash or dHash, because those operations
+mostly perturb high frequencies that pHash has already discarded. It costs a 32×32
+DCT per image, which is still trivial; only the 8 lowest frequencies are computed
+in each pass.
+
+One numerical detail. `scipy` computes the DCT through an FFT, so coefficients that
+are mathematically equal (every AC term of a flat image, the mirrored pairs of a
+symmetric one) come out exactly equal. A direct cosine summation gives values a
+few 1e-10 apart instead, and the strict comparison against the median would then
+turn a flat image into noise. Coefficients are therefore rounded to six decimals
+before the median is taken. Where the reference itself has an exact tie at the
+median, its answer is decided by floating-point noise and cannot be reproduced by
+anyone; such inputs are pathological (a single lit pixel in a black field) and
+do not occur in photographs.
+
 ### What the golden dataset shows
 
 Hamming distance from the base image, out of 64 bits, for the variants in
 `tests/NetImgHash.Tests/TestData`:
 
-| Variant | aHash | dHash |
-|---------|------:|------:|
-| Grayscale copy, 4K-style resize, thumbnail, transparent PNG, EXIF-tagged JPEG (orientation not applied) | 0 | 0 |
-| JPEG re-encoded at quality 90 and at quality 50 | 1 | 0 |
-| Slight crop and resize | 15 | 15 |
-| 90° rotation | 32 | 32 |
+| Variant | aHash | dHash | pHash |
+|---------|------:|------:|------:|
+| Grayscale copy, transparent PNG | 0 | 0 | 0 |
+| 4K-style resize, thumbnail | 0 | 0 | 2 |
+| EXIF-tagged JPEG (orientation not applied) | 1 | 0 | 2 |
+| JPEG re-encoded at quality 90 | 1 | 0 | 0 |
+| JPEG re-encoded at quality 50 | 1 | 0 | 2 |
+| Slight crop and resize | 15 | 14 | 32 |
+| 90° rotation | 32 | 32 | 38 |
 
-The first two rows are what these hashes are for: scale, format, colour and mild
-compression changes leave them intact or one bit off. The last two rows are what
-they are not for. A crop shifts every pixel of the grid, and a rotation scrambles
-it; 32 bits out of 64 is the distance between two unrelated images.
+The first five rows are what these hashes are for: scale, format, colour and mild
+compression changes leave them within two bits. The last two rows are what they
+are not for. A crop shifts every pixel of the grid, and a rotation scrambles it;
+32 bits out of 64 is the distance between two unrelated images.
 
-### What pHash would add, and why it is not here yet
-
-The classic pHash algorithm goes further:
-
-1. Resize to a larger grid, typically **32×32**, and convert to grayscale.
-2. Apply a **2-D Discrete Cosine Transform**, turning the pixels into frequency
-   coefficients (the same transform JPEG uses).
-3. Keep only the **low-frequency 8×8 block** in the top-left corner. These
-   coefficients describe the coarse structure of the image; the rest is detail and
-   noise.
-4. Threshold those 64 coefficients against their **median** (`imagehash` uses the
-   median; some descriptions say mean) to produce 64 bits.
-
-Working in the frequency domain makes pHash noticeably more tolerant of JPEG
-re-compression, blur, gamma and contrast changes than aHash or dHash, because those
-operations mostly perturb high frequencies that pHash has already discarded. It costs
-a 32×32 DCT per image, which is still trivial.
-
-It is reserved on the `HashAlgorithm` enum and `Compute` throws
-`NotSupportedException` for it, rather than silently returning some other hash. The
-roadmap below is the plan for filling it in.
+Note that on this small synthetic dataset pHash is not steadier than dHash. Its
+advantage shows on photographs under heavier compression, blur and tone changes,
+which the dataset does not yet contain; adding such cases is on the list.
 
 ## Roadmap: Proposed Additional Algorithms
 
@@ -197,24 +216,9 @@ dependency.
 |-----------|-----------|--------------|------|-------------|
 | aHash (shipped) | resize, re-encode, small colour shifts | brightness/contrast, uniform regions | lowest | — |
 | dHash (shipped) | the above, plus brightness/contrast | rotation, crop, flips | lowest | — |
-| pHash | the above, plus JPEG artefacts, blur, gamma | rotation, crop, flips | low (32×32 DCT) | high, no new dependency |
+| pHash (shipped) | the above, plus JPEG artefacts, blur, gamma | rotation, crop, flips | low (32×32 DCT) | — |
 | wHash | similar to pHash, better at multi-scale structure | rotation, crop, flips | low (Haar DWT) | high, no new dependency |
 | Embedding hash | crop, framing, viewpoint, same *subject* | exact-duplicate precision; determinism across hardware | high (neural network) | separate package |
-
-### pHash (DCT)
-
-**Why.** It is the algorithm the package is named after, and the one users of
-`imagehash` reach for by default. The golden dataset's JPEG variants barely move
-aHash and dHash, but those are mild re-encodes of a synthetic image. On photographs
-saved at low quality, or after blur, sharpening or gamma correction, pHash holds
-its distance where the pixel-domain hashes start to drift.
-
-**How.** A separable 2-D DCT-II over a 32×32 grid is two passes of a 32-point 1-D
-DCT, implementable in a few dozen lines with no dependency. Matching `imagehash`
-means following its exact choices: `scipy.fftpack.dct` with the default
-un-normalised `type=2`, applied along rows then columns; the top-left 8×8 block
-*including* the DC term; and the **median** as threshold, not the mean. The golden
-dataset would be extended with `imagehash.phash` outputs to lock it down.
 
 ### wHash (wavelet)
 
@@ -230,7 +234,7 @@ would need to be honoured for compatibility: the image is scaled to a power of t
 (`image_scale`); by default the top-level LL coefficient is zeroed and the image
 reconstructed without it (`remove_max_haar_ll=True`); then a second decomposition
 runs to a level derived from the hash size and its low-frequency band is
-thresholded against the median. More surface than pHash, so it would follow it.
+thresholded against the median. More surface than pHash had, but the same kind of work.
 
 ### Embedding-based ("deep") hashes
 
@@ -274,7 +278,13 @@ same enum.
 
 ## Compatibility Notes
 
-- The implementation is tuned to stay close to Python `imagehash` semantics for `aHash` and `dHash`.
+- The implementation reproduces Python `imagehash` for `aHash`, `dHash` and `pHash`,
+  including Pillow's grayscale conversion and resampling arithmetic, so PNG input
+  hashes bit for bit the same as in Python.
+- JPEG input is decoded by ImageSharp rather than libjpeg, and the two decoders
+  differ by ±1 on a small fraction of pixels (22 of 1024 on the dataset's EXIF JPEG
+  at 32×32). Every JPEG hash in the dataset still matches, but a JPEG whose pixels
+  sit exactly on a threshold can differ from Python by a bit.
 - The checked-in golden dataset under `tests/NetImgHash.Tests/TestData` is used to lock hash formatting, bit ordering, and representative image behavior.
 - EXIF auto-orientation is not part of the hashing pipeline for this MVP.
 
@@ -293,17 +303,24 @@ The test project includes a golden dataset with representative images:
 - rotated version
 
 The expected results live in `tests/NetImgHash.Tests/TestData/expected_hashes.json`.
+Every value in it comes from Python `imagehash`; none is edited by hand. The
+manifest records the `imagehash`, Pillow and NumPy versions that produced it.
 
-To regenerate the dataset locally with Python:
+To regenerate the manifest from the checked-in images:
 
-1. Create a local virtual environment.
-2. Install `pillow` and `imagehash`.
-3. Regenerate the images and manifest.
-4. Run `dotnet test`.
+```bash
+python -m venv .venv
+.venv/Scripts/pip install imagehash        # .venv/bin/pip on Linux/macOS
+.venv/Scripts/python tools/regenerate_golden.py
+dotnet test PerceptualHash.NET.sln
+```
+
+The script prints any value that changed. A change means either Pillow changed
+its arithmetic (it has not since 2020) or an image was replaced.
 
 ## Tests
 
-**60 tests, run against each of the three target frameworks — 180 executions.**
+**74 tests, run against each of the three target frameworks — 222 executions.**
 
 ```bash
 dotnet test PerceptualHash.NET.sln          # all three frameworks
@@ -312,9 +329,9 @@ dotnet test PerceptualHash.NET.sln -f net10.0   # just one
 
 | Suite | Tests | What it covers |
 |-------|------:|----------------|
-| `GoldenDatasetTests` | 20 | Exact hash strings for a checked-in dataset, generated by Python `imagehash`. This is the correctness anchor: it locks bit ordering, hex formatting, and behaviour on greyscale, transparency, EXIF orientation, resizes, crops, rotations and JPEG quality variants. |
+| `GoldenDatasetTests` | 30 | Exact aHash, dHash and pHash strings for a checked-in dataset, generated by Python `imagehash`. This is the correctness anchor: it locks bit ordering, hex formatting, and behaviour on greyscale, transparency, EXIF orientation, resizes, crops, rotations and JPEG quality variants. |
 | `ImageHashInvariantTests` | 31 | The bit-length invariant, the uninitialized `default`, mismatched lengths, and hex round-tripping. |
-| `AlgorithmTests` | 4 | aHash and dHash bit packing against hand-constructed images. |
+| `AlgorithmTests` | 8 | aHash and dHash bit packing, and the pHash DCT and median, against hand-constructed images with reference values from `imagehash`. |
 | `ImageHashTests` | 5 | Distance, similarity, parsing, formatting. |
 
 CI runs the whole suite on **Linux and Windows**. The golden dataset asserts exact
@@ -357,6 +374,11 @@ To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history.
+
+**Unreleased** — pHash implemented, bit-compatible with `imagehash.phash`. The
+grayscale and resize stages now reproduce Pillow's arithmetic exactly instead of
+using ImageSharp's resampler, which changes borderline aHash and dHash bits: two of
+the ten golden values moved by one bit and now match the reference.
 
 **0.3.0** — Same package as 0.2.1, re-versioned: targeting the .NET 10 and .NET 11
 preview SDKs is a minor-level change, so the release carries a minor bump. Prefer

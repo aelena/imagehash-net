@@ -18,7 +18,7 @@ public static class ImageHasher
         {
             HashAlgorithm.AverageHash => AverageHashAlgorithm.Compute(stream),
             HashAlgorithm.DifferenceHash => DifferenceHashAlgorithm.Compute(stream),
-            HashAlgorithm.PerceptualHash => throw new NotSupportedException("PerceptualHash will be added in a follow-up release."),
+            HashAlgorithm.PerceptualHash => PerceptualHashAlgorithm.Compute(stream),
             HashAlgorithm.WaveletHash => throw new NotSupportedException("WaveletHash will be added in a future release."),
             _ => throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, "Unsupported hash algorithm.")
         };

@@ -1,63 +1,78 @@
 {
+  "generatedWith": {
+    "imagehash": "4.3.2",
+    "pillow": "12.1.1",
+    "numpy": "2.4.3"
+  },
   "entries": [
     {
       "file": "standard-photo.png",
       "averageHash": "00000b191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c36b973d",
       "notes": "RGB base image"
     },
     {
       "file": "grayscale-image.png",
       "averageHash": "00000b191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c36b973d",
       "notes": "Grayscale conversion"
     },
     {
       "file": "high-resolution.png",
       "averageHash": "00000b191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c16b973f",
       "notes": "4K-style resize"
     },
     {
       "file": "thumbnail.png",
       "averageHash": "00000b191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c36b963f",
       "notes": "Low resolution thumbnail"
     },
     {
       "file": "exif-orientation.jpg",
-      "averageHash": "00000b191f7f1bff",
+      "averageHash": "000009191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c36b963f",
       "notes": "JPEG with EXIF orientation=6"
     },
     {
       "file": "transparent-overlay.png",
       "averageHash": "00000b191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c36b973d",
       "notes": "PNG with transparency"
     },
     {
       "file": "compressed-q50.jpg",
       "averageHash": "000009191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c16b973f",
       "notes": "JPEG quality 50"
     },
     {
       "file": "compressed-q90.jpg",
       "averageHash": "000009191f7f1bff",
       "differenceHash": "e7b433b3fbfd73f3",
+      "perceptualHash": "a8543623c36b973d",
       "notes": "JPEG quality 90"
     },
     {
       "file": "cropped-version.png",
       "averageHash": "000719f91d7fff3f",
-      "differenceHash": "66777171fbfefbf3",
+      "differenceHash": "67777171fbfefbf3",
+      "perceptualHash": "8e7e64e4c8e4c86b",
       "notes": "Slight crop and resize"
     },
     {
       "file": "rotated-version.png",
       "averageHash": "3f2f0d3f1f050501",
       "differenceHash": "fbdbc9f9b535b5ef",
+      "perceptualHash": "8ab3b59c859c3ee0",
       "notes": "90 degree rotation"
     }
   ]
