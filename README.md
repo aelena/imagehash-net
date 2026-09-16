@@ -188,11 +188,15 @@ secret `NUGET_USER` holding the nuget.org profile name (not an email address).
 A policy is bound to **one** repository, so each repository needs its own.
 
 To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
-`git tag v0.2.0 && git push origin v0.2.0`.
+`git tag v0.3.0 && git push origin v0.3.0`.
 
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history.
+
+**0.3.0** — Same package as 0.2.1, re-versioned: targeting the .NET 10 and .NET 11
+preview SDKs is a minor-level change, so the release carries a minor bump. Prefer
+0.3.0 over 0.2.1.
 
 **0.2.1** — Built and verified with the .NET 10.0.401 SDK and the .NET 11.0.100-rc.1
 preview SDK on `net8.0`, `net10.0` and `net11.0` (180 test executions passing).

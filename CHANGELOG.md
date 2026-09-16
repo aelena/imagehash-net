@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0]
+
+### Changed
+
+- **Re-versioned release of 0.2.1; the package contents are identical.** Shipping on
+  the .NET 10 and .NET 11 preview SDKs is a minor-level change under this project's
+  reading of semver, even with `net8.0` retained, so it carries a minor bump rather
+  than a patch. Prefer 0.3.0; 0.2.1 remains on nuget.org only because a published
+  version cannot be removed.
+
 ## [0.2.1]
 
 ### Changed
