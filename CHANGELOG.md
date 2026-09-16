@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1]
+
+### Changed
+
+- **Built and verified with the .NET 10.0.401 SDK and the .NET 11.0.100-rc.1 preview
+  SDK** on every target the package ships: `net8.0`, `net10.0` and `net11.0`. All 60
+  tests pass on each framework, 180 executions in total. The README now documents
+  building from a side-by-side SDK install (`~/.dotnet` with `DOTNET_ROOT`) when the
+  SDK on `PATH` is an older .NET 8, which cannot build this repository.
+- `Microsoft.SourceLink.GitHub` 8.0.0 → 10.0.401. Its transitive
+  `Microsoft.Build.Tasks.Git` 8.0.0 carries a moderate advisory
+  ([GHSA-23fw-v26w-5fgq](https://github.com/advisories/GHSA-23fw-v26w-5fgq)); with
+  `NuGetAudit` at level `low` and warnings as errors, restore refused to run, so the
+  repository did not build at all until the pin moved.
+- `Microsoft.NET.Test.Sdk` 18.9.0 → 18.10.1.
+- `SixLabors.ImageSharp` stays on 3.1.12, and the reason recorded in
+  `Directory.Packages.props` is corrected. It previously said 4.x requires `net9.0`;
+  4.x does ship a `net8.0` assembly. The real obstacle is that ImageSharp 4 fails the
+  build unless a Six Labors licence key is present and is no longer offered under the
+  Apache 2.0 side of the Split License, which an MIT library cannot pass on to its
+  consumers.
+
 ## [0.2.0]
 
 ### Fixed

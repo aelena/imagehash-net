@@ -5,13 +5,18 @@
   </PropertyGroup>
 
   <ItemGroup Label="Runtime">
-    <!-- 3.x, not 4.x: ImageSharp 4 requires net9.0 and this package still ships net8.0. -->
+    <!--
+      3.x, not 4.x. ImageSharp 4 ships a net8.0 assembly, so the target frameworks are
+      not the obstacle: its build targets fail unless a Six Labors licence key is present,
+      and 4.x is no longer offered under the Apache 2.0 side of the Split License. An MIT
+      library cannot carry that requirement into every consumer's build.
+    -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />

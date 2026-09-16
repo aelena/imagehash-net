@@ -31,8 +31,31 @@ This repository currently ships the MVP surface:
 
 The frameworks are fixed in `Directory.Build.props` rather than derived from the
 installed SDK, so a local build produces the same set of targets as CI and as the
-published package. Building all three needs the .NET 8, 10, and 11 SDKs; to build
-a subset, pass `-p:TargetFrameworks=net10.0`.
+published package. Building all three needs the .NET 10 SDK or newer (the .NET 11
+SDK is still preview); to build a subset, pass `-p:TargetFrameworks=net10.0`.
+
+### Building when the SDK on `PATH` is .NET 8
+
+A .NET 8 SDK cannot build this repository: it does not know `net10.0` or `net11.0`.
+Install the newer SDKs side by side without touching `PATH`, then point the build
+at that directory. The .NET 8 *runtime* is also needed there so the `net8.0` tests
+can execute.
+
+```powershell
+# one-time, from https://dot.net/v1/dotnet-install.ps1 (dotnet-install.sh on Linux/macOS)
+.\dotnet-install.ps1 -Channel 10.0 -InstallDir ~\.dotnet -NoPath
+.\dotnet-install.ps1 -Channel 11.0 -Quality preview -InstallDir ~\.dotnet -NoPath
+.\dotnet-install.ps1 -Channel 8.0 -Runtime dotnet -InstallDir ~\.dotnet -NoPath
+```
+
+```bash
+# every build
+PATH=~/.dotnet:$PATH DOTNET_ROOT=~/.dotnet dotnet build PerceptualHash.NET.sln
+PATH=~/.dotnet:$PATH DOTNET_ROOT=~/.dotnet dotnet test  PerceptualHash.NET.sln
+```
+
+`DOTNET_ROOT` matters as much as `PATH`: without it the test host resolves runtimes
+from the machine-wide install and fails to find .NET 10 and 11.
 
 ## Install
 
@@ -169,7 +192,14 @@ To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md).
+See [CHANGELOG.md](CHANGELOG.md) for the full history.
+
+**0.2.1** — Built and verified with the .NET 10.0.401 SDK and the .NET 11.0.100-rc.1
+preview SDK on `net8.0`, `net10.0` and `net11.0` (180 test executions passing).
+SourceLink moved to 10.0.401 to clear a NuGet audit advisory that had been failing
+restore, and the Test SDK to 18.10.1. ImageSharp stays on 3.1.12: version 4 requires
+a Six Labors licence key at build time, which an MIT library cannot impose on its
+consumers.
 
 ## License
 
@@ -178,7 +208,7 @@ See [CHANGELOG.md](CHANGELOG.md).
 ### On ImageSharp
 
 The single runtime dependency, `SixLabors.ImageSharp`, is under the
-[Six Labors Split License](https://github.com/SixLabors/ImageSharp/blob/main/LICENSE),
+[Six Labors Split License](https://github.com/SixLabors/ImageSharp/blob/v3.1.12/LICENSE),
 which is Apache 2.0 or a commercial licence depending on how you consume it. It
 is worth being precise about, because the licence text is explicit and the answer
 is favourable:
@@ -197,3 +227,9 @@ anyway, being open source.
 
 Not legal advice, but the clause is unambiguous and quoted above so you can check
 it yourself.
+
+This is also why the dependency is pinned to the 3.1.x line. ImageSharp 4 moved to
+a licence-key model: its build targets fail without a Six Labors key, and it is no
+longer offered under the Apache 2.0 side of the Split License. Adopting it would put
+that requirement on every consumer of this package, so it stays on 3.1.12 until that
+changes.
