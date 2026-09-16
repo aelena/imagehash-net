@@ -90,23 +90,187 @@ about 10 usually means a different one. Tune the threshold against your own data
 `Compute` throws `NotSupportedException` for `HashAlgorithm.PerceptualHash` and
 `HashAlgorithm.WaveletHash`, which are reserved but not yet implemented.
 
-## Algorithm Specifications
+## Which Algorithm Is Used
 
-### Average Hash
+Despite the package name, **this library does not yet implement pHash**, the
+DCT-based algorithm most people mean by "perceptual hash". What ships today is
+**aHash** and **dHash**, the two simplest members of the same family. Both follow
+the Python `imagehash` implementation step for step, which is what makes the golden
+dataset possible: a hash computed here is the same 64 bits `imagehash` produces for
+the same file.
 
-1. Convert the image to grayscale.
-2. Resize to `8x8`.
-3. Compute the mean luminance value.
-4. Set each bit when the pixel is greater than the mean.
-5. Return the 64-bit result as lowercase hexadecimal.
+### The shared pipeline
 
-### Difference Hash
+Every algorithm starts the same way, in `Internal/ImageProcessing.cs`:
 
-1. Convert the image to grayscale.
-2. Resize to `9x8`.
-3. Compare each pixel to its neighbor on the left.
-4. Set each bit when the right-hand pixel is brighter.
-5. Return the 64-bit result as lowercase hexadecimal.
+1. **Decode** the image with ImageSharp into 8-bit RGBA. Alpha is ignored; a
+   transparent pixel contributes only its RGB values, exactly as Pillow's
+   `convert("L")` does.
+2. **Convert to grayscale** using Pillow's ITU-R 601-2 luma weights
+   (`0.299 R + 0.587 G + 0.114 B`, rounded to the nearest integer). Doing this
+   *before* resizing, not after, matters: the two orders give different pixels
+   after interpolation, and `imagehash` converts first.
+3. **Resize** the grayscale image to a tiny fixed grid with a Lanczos-3 filter,
+   which is Pillow's `LANCZOS` (formerly `ANTIALIAS`). This throws away all fine
+   detail and normalises scale, so a 4000×3000 photo and its 400×300 thumbnail
+   arrive at the same few dozen pixels.
+4. **Threshold** those pixels into bits. How the threshold is chosen is what
+   distinguishes the algorithms.
+
+The result is always 64 bits, packed most-significant-bit first in row-major order
+(the top-left decision is bit 63) and printed as 16 lowercase hex digits.
+
+### Average hash (`HashAlgorithm.AverageHash`)
+
+- Resize to **8×8** (64 pixels).
+- Compute the **mean** luminance as an integer (sum of the 64 values divided by 64,
+  fractional part dropped).
+- Set a bit to `1` where the pixel is **strictly greater** than the mean.
+
+aHash encodes which regions of the image are lighter than average. It is the
+cheapest hash to compute and is good at finding exact and near-exact duplicates:
+re-encodes, resizes, small colour shifts. Its weakness is that a global brightness
+or contrast change, or a large uniform region, can flip many bits at once because
+every pixel is compared against a single number.
+
+### Difference hash (`HashAlgorithm.DifferenceHash`)
+
+- Resize to **9 wide × 8 high** (72 pixels).
+- For each row, compare each pixel with its **right-hand neighbour**: 8 comparisons
+  per row, 64 in total.
+- Set a bit to `1` where the right pixel is **brighter** than the left.
+
+dHash encodes horizontal gradients rather than absolute brightness, so a uniform
+brightness or contrast change leaves it untouched: if the right pixel was brighter
+before, it is brighter after. In practice it produces fewer false matches than aHash
+on photographic content at the same cost, which is why it is the better default for
+"is this the same picture, lightly edited?".
+
+### What the golden dataset shows
+
+Hamming distance from the base image, out of 64 bits, for the variants in
+`tests/NetImgHash.Tests/TestData`:
+
+| Variant | aHash | dHash |
+|---------|------:|------:|
+| Grayscale copy, 4K-style resize, thumbnail, transparent PNG, EXIF-tagged JPEG (orientation not applied) | 0 | 0 |
+| JPEG re-encoded at quality 90 and at quality 50 | 1 | 0 |
+| Slight crop and resize | 15 | 15 |
+| 90° rotation | 32 | 32 |
+
+The first two rows are what these hashes are for: scale, format, colour and mild
+compression changes leave them intact or one bit off. The last two rows are what
+they are not for. A crop shifts every pixel of the grid, and a rotation scrambles
+it; 32 bits out of 64 is the distance between two unrelated images.
+
+### What pHash would add, and why it is not here yet
+
+The classic pHash algorithm goes further:
+
+1. Resize to a larger grid, typically **32×32**, and convert to grayscale.
+2. Apply a **2-D Discrete Cosine Transform**, turning the pixels into frequency
+   coefficients (the same transform JPEG uses).
+3. Keep only the **low-frequency 8×8 block** in the top-left corner. These
+   coefficients describe the coarse structure of the image; the rest is detail and
+   noise.
+4. Threshold those 64 coefficients against their **median** (`imagehash` uses the
+   median; some descriptions say mean) to produce 64 bits.
+
+Working in the frequency domain makes pHash noticeably more tolerant of JPEG
+re-compression, blur, gamma and contrast changes than aHash or dHash, because those
+operations mostly perturb high frequencies that pHash has already discarded. It costs
+a 32×32 DCT per image, which is still trivial.
+
+It is reserved on the `HashAlgorithm` enum and `Compute` throws
+`NotSupportedException` for it, rather than silently returning some other hash. The
+roadmap below is the plan for filling it in.
+
+## Roadmap: Proposed Additional Algorithms
+
+None of these is committed yet. They are listed with the reasoning for wanting each,
+so the order can be argued about. The constraint they all work under is the one this
+library already has: results must match the Python `imagehash` reference bit for bit
+where a reference exists, and the core package keeps ImageSharp as its only runtime
+dependency.
+
+| Algorithm | Robust to | Weak against | Cost | Feasibility |
+|-----------|-----------|--------------|------|-------------|
+| aHash (shipped) | resize, re-encode, small colour shifts | brightness/contrast, uniform regions | lowest | — |
+| dHash (shipped) | the above, plus brightness/contrast | rotation, crop, flips | lowest | — |
+| pHash | the above, plus JPEG artefacts, blur, gamma | rotation, crop, flips | low (32×32 DCT) | high, no new dependency |
+| wHash | similar to pHash, better at multi-scale structure | rotation, crop, flips | low (Haar DWT) | high, no new dependency |
+| Embedding hash | crop, framing, viewpoint, same *subject* | exact-duplicate precision; determinism across hardware | high (neural network) | separate package |
+
+### pHash (DCT)
+
+**Why.** It is the algorithm the package is named after, and the one users of
+`imagehash` reach for by default. The golden dataset's JPEG variants barely move
+aHash and dHash, but those are mild re-encodes of a synthetic image. On photographs
+saved at low quality, or after blur, sharpening or gamma correction, pHash holds
+its distance where the pixel-domain hashes start to drift.
+
+**How.** A separable 2-D DCT-II over a 32×32 grid is two passes of a 32-point 1-D
+DCT, implementable in a few dozen lines with no dependency. Matching `imagehash`
+means following its exact choices: `scipy.fftpack.dct` with the default
+un-normalised `type=2`, applied along rows then columns; the top-left 8×8 block
+*including* the DC term; and the **median** as threshold, not the mean. The golden
+dataset would be extended with `imagehash.phash` outputs to lock it down.
+
+### wHash (wavelet)
+
+**Why.** wHash replaces the DCT with a Haar wavelet decomposition. Wavelets localise
+in both space and frequency, so wHash tends to represent images with strong regional
+structure (a bright object on a dark background, text on a page) more stably than a
+global DCT does, and it degrades more gracefully as the image is scaled. Having both
+lets a caller pick per corpus.
+
+**How.** The Haar DWT is averages and differences of neighbouring pixels, repeated
+per level; no dependency needed. The `imagehash` reference has a few knobs that
+would need to be honoured for compatibility: the image is scaled to a power of two
+(`image_scale`); by default the top-level LL coefficient is zeroed and the image
+reconstructed without it (`remove_max_haar_ll=True`); then a second decomposition
+runs to a level derived from the hash size and its low-frequency band is
+thresholded against the median. More surface than pHash, so it would follow it.
+
+### Embedding-based ("deep") hashes
+
+**Why.** Every hash above is a *pixel-structure* hash: it answers "is this the same
+picture, lightly modified?". None of them can say that two photos show the same
+object from a different angle, a different crop, or a different framing. The
+cropped and rotated entries in the test dataset are the honest demonstration:
+their aHash and dHash are, correctly, far from the original's (15 and 32 bits
+out of 64). A neural embedding
+(CLIP, DINOv2 and similar) captures *what* is in the image, so a hash derived from it
+answers the semantic question instead. For deduplicating a photo library or
+matching product images that is often the question actually being asked.
+
+**How, and why it would be a separate package.** Run an ONNX model through
+`Microsoft.ML.OnnxRuntime` to get a float vector, then binarise it with
+random-hyperplane locality-sensitive hashing so the result is still a fixed-width
+bit string comparable by Hamming distance through the existing `ImageHash` type.
+Two consequences keep it out of the core:
+
+- The dependency footprint is a native runtime plus a model file of tens to
+  hundreds of megabytes, against a core package whose whole appeal is one managed
+  dependency and a 12 KB assembly.
+- Floating-point results differ slightly across CPUs and GPUs, so a bit near a
+  hyperplane can flip between machines. Such a hash is *comparable* but not
+  *reproducible* the way the pixel hashes are, and the documentation would have to
+  say so plainly.
+
+Both point at a companion package (`PerceptualHash.NET.Embeddings` or similar) that
+depends on this one and reuses `ImageHash`, rather than a fourth algorithm on the
+same enum.
+
+### Also worth considering
+
+- **Crop-resistant hashing.** `imagehash` ships a segmentation-based approach that
+  hashes image regions independently and matches on any shared region. It directly
+  addresses the crop case without a neural network, at the price of a variable-size
+  hash that does not fit the current 64-bit `ImageHash`.
+- **Larger hash sizes.** `imagehash` lets every algorithm run at 16×16 (256 bits)
+  for finer discrimination. `ImageHash` is capped at 64 bits today; lifting that is
+  a prerequisite for both this and crop-resistant hashing.
 
 ## Compatibility Notes
 

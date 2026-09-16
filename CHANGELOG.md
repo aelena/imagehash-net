@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- README: replaces the terse algorithm list with an account of the exact pipeline
+  (Pillow luma before a Lanczos-3 resize, integer mean, strict comparisons, MSB-first
+  packing), states plainly that no DCT-based pHash is implemented yet despite the
+  package name, and adds a proposed roadmap with the reasoning for pHash, wHash and
+  an embedding-based companion package.
+
 ## [0.3.0]
 
 ### Changed
