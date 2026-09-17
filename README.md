@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/aelena/imagehash-net/main/assets/logo.svg" width="112" height="112" alt="PerceptualHash.NET logo: an 8 by 8 grid of hash bits whose set bits draw two mountains under a sun">
+</p>
+
 # PerceptualHash.NET
 
 [![CI](https://github.com/aelena/imagehash-net/actions/workflows/ci.yml/badge.svg)](https://github.com/aelena/imagehash-net/actions/workflows/ci.yml)
