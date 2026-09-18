@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageId>PerceptualHash.NET</PackageId>
     <Title>PerceptualHash.NET</Title>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Description>Cross-platform perceptual image hashing for .NET built on ImageSharp. Implements aHash and dHash, with output verified against the Python imagehash reference implementation.</Description>
     <Authors>aelena</Authors>
     <Company>aelena</Company>

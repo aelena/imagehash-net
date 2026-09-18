@@ -6,9 +6,9 @@ internal static class DifferenceHashAlgorithm
     private const int Height = 8;
     private const int TotalBits = 64;
 
-    public static ImageHash Compute(Stream stream)
+    public static ImageHash Compute(Stream stream, ImageHashOptions options)
     {
-        var pixels = ImageProcessing.LoadResizedGrayscaleBuffer(stream, Width, Height);
+        var pixels = ImageProcessing.LoadResizedGrayscaleBuffer(stream, Width, Height, options);
         ulong value = 0;
         var bitIndex = 0;
 

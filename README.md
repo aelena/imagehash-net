@@ -8,7 +8,8 @@
 [![NuGet](https://img.shields.io/nuget/v/PerceptualHash.NET.svg?logo=nuget)](https://www.nuget.org/packages/PerceptualHash.NET)
 [![Downloads](https://img.shields.io/nuget/dt/PerceptualHash.NET.svg?logo=nuget)](https://www.nuget.org/packages/PerceptualHash.NET)
 [![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%2010.0%20%7C%2011.0-512BD4)]()
-[![Tests](https://img.shields.io/badge/tests-222%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-480%20passing-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-100%25%20lines%20%C2%B7%2099%25%20branches-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 `PerceptualHash.NET` is a cross-platform image hashing library for modern .NET, implemented in the `NetImgHash` namespace and built on `SixLabors.ImageSharp`.
@@ -86,8 +87,27 @@ var similarity = hash1.Similarity(hash2);      // 1.0 = identical, 0.0 = every b
 
 // Hashes round-trip through lowercase hex, so they can be stored and compared later.
 var stored = hash1.ToString();                 // e.g. "a1b2c3d4e5f60718"
-var restored = ImageHash.Parse(stored);
+var restored = ImageHash.Parse(stored);        // exactly 16 digits for a 64-bit hash
 ```
+
+For images a stranger uploaded, the header is checked against a pixel budget before
+anything is decoded. The default is 50 megapixels; set your own per call:
+
+```csharp
+var options = new ImageHashOptions { MaxPixels = 20_000_000 };
+
+try
+{
+    var hash = ImageHasher.Compute(upload, HashAlgorithm.PerceptualHash, options);
+}
+catch (ImageTooLargeException ex)
+{
+    // ex.Width and ex.Height are what the header claimed; ex.MaxPixels is your budget.
+}
+```
+
+Only the first frame of an animated GIF or multi-page image is decoded, which is
+also the frame Pillow hands `imagehash`.
 
 A `Hamming` distance of 0–5 on a 64-bit hash usually means the same image; above
 about 10 usually means a different one. Tune the threshold against your own data.
@@ -289,8 +309,35 @@ same enum.
   differ by ±1 on a small fraction of pixels (22 of 1024 on the dataset's EXIF JPEG
   at 32×32). Every JPEG hash in the dataset still matches, but a JPEG whose pixels
   sit exactly on a threshold can differ from Python by a bit.
+- **16-bit PNGs do not match the reference.** Pillow's reduction of 16-bit samples to
+  8 bits is not the same as ImageSharp's, so all three hashes differ for such files.
+  8-bit RGB, RGBA, grayscale and palette PNGs, and both YCbCr and CMYK JPEGs, are
+  verified to match in the golden dataset.
 - The checked-in golden dataset under `tests/NetImgHash.Tests/TestData` is used to lock hash formatting, bit ordering, and representative image behavior.
 - EXIF auto-orientation is not part of the hashing pipeline for this MVP.
+
+## Untrusted Input
+
+Hashing is usually done on files somebody else supplied, so the decoding stage is
+treated as an attack surface.
+
+- **Pixel budget.** Decoders trust the dimensions in the header, so a 70-byte PNG
+  that claims 20000×20000 would otherwise cost over 2 GB and 18 seconds. The header
+  is read first and compared with `ImageHashOptions.MaxPixels` (default 50
+  megapixels); an image above it fails with `ImageTooLargeException` before any
+  pixel buffer exists, in about 10 ms.
+- **First frame only.** A 120-frame animation used to be decoded in full for one
+  hash, multiplying memory by the frame count. One frame is decoded now.
+- **Not an image** fails fast with ImageSharp's `UnknownImageFormatException`.
+- **Truncated images hash rather than fail.** ImageSharp fills missing pixel data
+  with black, where Pillow raises by default. A cut-off upload therefore yields a
+  hash that looks plausible and matches nothing. Validate file integrity upstream
+  if that matters to you.
+- **The decoders themselves** are ImageSharp's. Their fixes arrive through the pinned
+  dependency, and `NuGetAudit` fails the build on any known advisory in the graph.
+
+Non-seekable streams (network, pipes) are buffered into memory before decoding,
+which is what ImageSharp would do anyway. Bound the upload size yourself.
 
 ## Test Data
 
@@ -305,6 +352,11 @@ The test project includes a golden dataset with representative images:
 - JPEG quality variants
 - cropped version
 - rotated version
+- random noise at odd sizes (37×23, 640×8, 9×300), which has no structure to hide a
+  resampling error behind and exercises the horizontal-only and vertical-only
+  resize paths
+- 2×2 and 3×5 images that are enlarged rather than reduced
+- palette PNG and CMYK JPEG
 
 The expected results live in `tests/NetImgHash.Tests/TestData/expected_hashes.json`.
 Every value in it comes from Python `imagehash`; none is edited by hand. The
@@ -324,7 +376,10 @@ its arithmetic (it has not since 2020) or an image was replaced.
 
 ## Tests
 
-**74 tests, run against each of the three target frameworks — 222 executions.**
+**160 tests, run against each of the three target frameworks — 480 executions.**
+**Line coverage 100%, branch coverage 99%**, measured with coverlet. The one partial
+branch is a divide-by-zero guard in the resampler that Lanczos weights can never
+trigger.
 
 ```bash
 dotnet test PerceptualHash.NET.sln          # all three frameworks
@@ -333,8 +388,10 @@ dotnet test PerceptualHash.NET.sln -f net10.0   # just one
 
 | Suite | Tests | What it covers |
 |-------|------:|----------------|
-| `GoldenDatasetTests` | 30 | Exact aHash, dHash and pHash strings for a checked-in dataset, generated by Python `imagehash`. This is the correctness anchor: it locks bit ordering, hex formatting, and behaviour on greyscale, transparency, EXIF orientation, resizes, crops, rotations and JPEG quality variants. |
+| `GoldenDatasetTests` | 51 | Exact aHash, dHash and pHash strings for 17 checked-in images, generated by Python `imagehash`. This is the correctness anchor: it locks bit ordering, hex formatting, and behaviour on greyscale, transparency, EXIF orientation, resizes, crops, rotations and JPEG quality variants. |
 | `ImageHashInvariantTests` | 31 | The bit-length invariant, the uninitialized `default`, mismatched lengths, and hex round-tripping. |
+| `ImageHashParsingTests` | 40 | Exact digit counts, unaligned bit lengths, case, `0x` prefix and whitespace, non-hex input, equality operators and dictionary use. |
+| `ImageHasherTests` | 25 | Argument validation, non-seekable streams, the pixel budget against crafted decompression-bomb headers, custom budgets at and above the limit, first-frame-only decoding of an animated GIF. |
 | `AlgorithmTests` | 8 | aHash and dHash bit packing, and the pHash DCT and median, against hand-constructed images with reference values from `imagehash`. |
 | `ImageHashTests` | 5 | Distance, similarity, parsing, formatting. |
 
@@ -373,11 +430,18 @@ secret `NUGET_USER` holding the nuget.org profile name (not an email address).
 A policy is bound to **one** repository, so each repository needs its own.
 
 To cut a release: set `<Version>` in `NetImgHash.csproj`, commit, then
-`git tag v0.4.0 && git push origin v0.4.0`.
+`git tag v0.4.1 && git push origin v0.4.1`.
 
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history.
+
+**0.4.1** — Hardening. A pixel budget (`ImageHashOptions.MaxPixels`, default 50
+megapixels) is checked against the header before decoding, so a crafted 70-byte PNG
+can no longer demand gigabytes; only the first frame of an animation is decoded;
+`ImageHash.Parse` reports a bad bit length as an argument error and requires the
+full-width hex string. Seven images added to the golden dataset. 160 tests, 100%
+line coverage.
 
 **0.4.0** — pHash implemented, bit-compatible with `imagehash.phash`. The
 grayscale and resize stages now reproduce Pillow's arithmetic exactly instead of

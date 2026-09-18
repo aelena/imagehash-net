@@ -1,4 +1,5 @@
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace NetImgHash.Internal;
@@ -10,11 +11,45 @@ namespace NetImgHash.Internal;
 /// </summary>
 internal static class ImageProcessing
 {
-    public static byte[] LoadResizedGrayscaleBuffer(Stream stream, int width, int height)
+    public static byte[] LoadResizedGrayscaleBuffer(Stream stream, int width, int height, ImageHashOptions options)
     {
         ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(options);
 
-        using var image = Image.Load<Rgba32>(stream);
+        if (stream.CanSeek)
+        {
+            return Load(stream, width, height, options);
+        }
+
+        // The header is read twice (identify, then decode), which needs to seek.
+        // ImageSharp buffers a non-seekable stream into memory anyway, so this costs
+        // nothing extra, and the file size is bounded by whoever handed us the stream.
+        using var buffered = new MemoryStream();
+        stream.CopyTo(buffered);
+        buffered.Position = 0;
+        return Load(buffered, width, height, options);
+    }
+
+    private static byte[] Load(Stream stream, int width, int height, ImageHashOptions options)
+    {
+        // Only the first frame is ever hashed, which is also what Pillow hands
+        // imagehash. Decoding every frame of an animation multiplies memory by the
+        // frame count for nothing.
+        var decoderOptions = new DecoderOptions { MaxFrames = 1 };
+
+        // The header is checked against the pixel budget before any pixel buffer
+        // exists. Decoders trust the declared dimensions, so without this a 70-byte
+        // file can demand gigabytes.
+        var start = stream.Position;
+        var info = Image.Identify(decoderOptions, stream);
+        stream.Position = start;
+
+        if ((long)info.Width * info.Height > options.MaxPixels)
+        {
+            throw new ImageTooLargeException(info.Width, info.Height, options.MaxPixels);
+        }
+
+        using var image = Image.Load<Rgba32>(decoderOptions, stream);
         var grayscale = new byte[image.Width * image.Height];
         var index = 0;
 

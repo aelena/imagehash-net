@@ -104,9 +104,19 @@ public readonly struct ImageHash : IEquatable<ImageHash>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
+        // A bad bit length is the caller's argument, not the string's format, and is
+        // reported as such before the string is looked at.
+        if (bitLength is <= 0 or > MaxBits)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(bitLength), bitLength, $"Bit length must be between 1 and {MaxBits}.");
+        }
+
         if (!TryParse(value, bitLength, out var hash))
         {
-            throw new FormatException($"'{value}' is not a valid {bitLength}-bit hexadecimal hash.");
+            throw new FormatException(
+                $"'{value}' is not a valid {bitLength}-bit hexadecimal hash: expected exactly "
+                + $"{HexDigitsFor(bitLength)} hexadecimal digits, optionally prefixed with 0x.");
         }
 
         return hash;
@@ -117,7 +127,8 @@ public readonly struct ImageHash : IEquatable<ImageHash>
     /// </summary>
     /// <returns>
     /// <c>false</c> when the string is not hexadecimal, when <paramref name="bitLength"/> is
-    /// outside 1 to 64, or when the parsed value does not fit in that many bits.
+    /// outside 1 to 64, when the string does not have exactly the number of hex digits
+    /// that bit length implies, or when the parsed value does not fit in that many bits.
     /// </returns>
     public static bool TryParse(string? value, int bitLength, out ImageHash hash)
     {
@@ -133,6 +144,14 @@ public readonly struct ImageHash : IEquatable<ImageHash>
         if (normalized.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
         {
             normalized = normalized[2..];
+        }
+
+        // Exactly the digits the bit length implies, no fewer. ToString always pads, and
+        // so does Python imagehash, so a shorter string is a stored hash that lost its
+        // leading zeros or was cut short; either way it is not the hash it claims to be.
+        if (normalized.Length != HexDigitsFor(bitLength))
+        {
+            return false;
         }
 
         if (!ulong.TryParse(normalized, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var parsed))
@@ -167,8 +186,7 @@ public readonly struct ImageHash : IEquatable<ImageHash>
         Span<char> buffer = stackalloc char[MaxHexDigits];
         Value.TryFormat(buffer, out _, "x16", CultureInfo.InvariantCulture);
 
-        var digits = (BitLength + 3) / 4;
-        return new string(buffer[(MaxHexDigits - digits)..]);
+        return new string(buffer[(MaxHexDigits - HexDigitsFor(BitLength))..]);
     }
 
     /// <inheritdoc />
@@ -192,6 +210,8 @@ public readonly struct ImageHash : IEquatable<ImageHash>
 
     private static ulong MaskFor(int bitLength) =>
         bitLength == MaxBits ? ulong.MaxValue : (1UL << bitLength) - 1;
+
+    private static int HexDigitsFor(int bitLength) => (bitLength + 3) / 4;
 
     private static void ThrowIfEmpty(ImageHash hash)
     {

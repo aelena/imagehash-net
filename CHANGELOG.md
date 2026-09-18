@@ -4,6 +4,50 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1]
+
+### Added
+
+- **A pixel budget checked before decoding.** `ImageHashOptions.MaxPixels` (default
+  50,000,000) is compared with the dimensions in the image header, and an image
+  above it fails with the new `ImageTooLargeException` carrying `Width`, `Height`
+  and `MaxPixels`. `ImageHasher.Compute` gains overloads taking `ImageHashOptions`.
+  Decoders trust the header, so before this a syntactically valid 69-byte PNG
+  claiming 20000×20000 allocated 2.2 GB, ran for 18 seconds, and returned a hash.
+  It now fails in about 10 milliseconds with no pixel buffer allocated.
+- Seven images in the golden dataset, all verified against `imagehash`: random
+  noise at 37×23, 640×8 and 9×300 (the last two exercise the horizontal-only and
+  vertical-only resize paths), 2×2 and 3×5 images that are enlarged rather than
+  reduced, a palette PNG and a CMYK JPEG. **10 images → 17; 30 golden cases → 51.**
+- 86 tests: argument validation on every `ImageHasher` entry point, non-seekable
+  streams, crafted decompression-bomb headers against the default and custom
+  budgets, first-frame-only decoding of an animated GIF, and the parsing and
+  equality surface of `ImageHash`. **74 tests → 160; line coverage 96.6% → 100%,
+  branch coverage 90.2% → 99.2%.** The remaining partial branch is a divide-by-zero
+  guard in the resampler that Lanczos weights cannot trigger.
+
+### Changed
+
+- **Only the first frame of a multi-frame image is decoded.** A 120-frame GIF at
+  400×400 peaked at 110 MB to produce one hash; the hash is of the first frame
+  either way, which is also what Pillow gives `imagehash`.
+- **`ImageHash.Parse` and `TryParse` require the full-width string:** exactly
+  ⌈bits/4⌉ hexadecimal digits after an optional `0x`. `ToString` and Python
+  `imagehash` always pad, so a shorter string is a stored hash that lost its leading
+  zeros or was truncated. `"ff"` no longer parses as a 64-bit hash; `TryParse`
+  returns `false` and `Parse` names the expected digit count.
+- `ImageHash.Parse` with a bit length outside 1 to 64 throws
+  `ArgumentOutOfRangeException` naming `bitLength`, instead of a `FormatException`
+  blaming the string.
+- Non-seekable streams are buffered explicitly so the header can be read twice.
+
+### Documented
+
+- 16-bit PNGs do not match the reference: Pillow and ImageSharp reduce 16-bit
+  samples to 8 bits differently. CMYK JPEGs, which were suspected, do match.
+- Truncated images decode to black and hash, where Pillow raises. Noted under a new
+  "Untrusted Input" section in the README, with the rest of the threat model.
+
 ## [0.4.0]
 
 ### Added

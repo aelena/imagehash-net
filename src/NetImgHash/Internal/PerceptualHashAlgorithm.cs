@@ -26,9 +26,9 @@ internal static class PerceptualHashAlgorithm
     /// </summary>
     private static readonly double[] CosineTable = BuildCosineTable(ImageSize);
 
-    public static ImageHash Compute(Stream stream)
+    public static ImageHash Compute(Stream stream, ImageHashOptions options)
     {
-        var pixels = ImageProcessing.LoadResizedGrayscaleBuffer(stream, ImageSize, ImageSize);
+        var pixels = ImageProcessing.LoadResizedGrayscaleBuffer(stream, ImageSize, ImageSize, options);
 
         // scipy.fftpack.dct(pixels, axis=0): a 1-D DCT down each column, keeping only
         // the low HashSize frequencies, since the second pass and the final block

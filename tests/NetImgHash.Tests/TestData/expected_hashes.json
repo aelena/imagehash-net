@@ -74,6 +74,55 @@
       "differenceHash": "fbdbc9f9b535b5ef",
       "perceptualHash": "8ab3b59c859c3ee0",
       "notes": "90 degree rotation"
+    },
+    {
+      "file": "tiny-2x2.png",
+      "averageHash": "07070f0f0f0f0f0f",
+      "differenceHash": "fffffffffffffefe",
+      "perceptualHash": "96685ea15ae17a56",
+      "notes": "2x2 RGB upscaled 16x to 32x32: the enlarging path of the resampler"
+    },
+    {
+      "file": "tiny-3x5.png",
+      "averageHash": "07070f0f1f1f7c78",
+      "differenceHash": "7ffffffffffff1e0",
+      "perceptualHash": "98374eb7495aa156",
+      "notes": "3x5 grayscale, odd aspect, upscaled"
+    },
+    {
+      "file": "noise-37x23.png",
+      "averageHash": "0f0f9927d7c6669d",
+      "differenceHash": "aabb3b6da695cc39",
+      "perceptualHash": "b02d99a42f06f99d",
+      "notes": "Random RGB noise at odd dimensions: no structure to hide a resampling error behind"
+    },
+    {
+      "file": "noise-640x8.png",
+      "averageHash": "a38c0c523b73d94c",
+      "differenceHash": "4a1574b656d633a8",
+      "perceptualHash": "943f32adc5ed060b",
+      "notes": "Random gray noise already 8 rows tall: horizontal-only resize for aHash and dHash"
+    },
+    {
+      "file": "noise-9x300.png",
+      "averageHash": "c2b0985b8e54507d",
+      "differenceHash": "1a672aa25694b5a9",
+      "perceptualHash": "d07f6371b120f153",
+      "notes": "Random gray noise 9 columns wide: vertical-only resize for dHash"
+    },
+    {
+      "file": "palette.png",
+      "averageHash": "0f0b9907f744669f",
+      "differenceHash": "aabb3b6d2695cc39",
+      "perceptualHash": "ba2d99a4af06d88d",
+      "notes": "Indexed-colour (palette) PNG"
+    },
+    {
+      "file": "cmyk.jpg",
+      "averageHash": "0f0f9927d7c6669d",
+      "differenceHash": "aabb3b6da694cc39",
+      "perceptualHash": "b82d99a42f06d99d",
+      "notes": "CMYK JPEG; Pillow converts CMYK to L through RGB"
     }
   ]
 }

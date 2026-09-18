@@ -5,9 +5,9 @@ internal static class AverageHashAlgorithm
     private const int HashSize = 8;
     private const int TotalBits = HashSize * HashSize;
 
-    public static ImageHash Compute(Stream stream)
+    public static ImageHash Compute(Stream stream, ImageHashOptions options)
     {
-        var pixels = ImageProcessing.LoadResizedGrayscaleBuffer(stream, HashSize, HashSize);
+        var pixels = ImageProcessing.LoadResizedGrayscaleBuffer(stream, HashSize, HashSize, options);
 
         long sum = 0;
         foreach (var pixel in pixels)
